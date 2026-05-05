@@ -18,11 +18,15 @@ function App() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post(`${BASE_URL}/upload`, formData);
+      const res = await axios.post(`${BASE_URL}/upload`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       alert(res.data.message);
     } catch (err) {
-      console.error(err);
+      console.error(err.response?.data || err.message);
       alert("PDF upload failed ❌");
     }
   };
@@ -35,16 +39,19 @@ function App() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post(`${BASE_URL}/upload-audio`, formData);
+      const res = await axios.post(`${BASE_URL}/upload-audio`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      // 🔥 audio URL from deployed backend
       if (res.data.file?.filename) {
         setAudioUrl(`${BASE_URL}/uploads/${res.data.file.filename}`);
       }
 
       alert(res.data.message);
     } catch (err) {
-      console.error(err);
+      console.error(err.response?.data || err.message);
       alert("Audio upload failed ❌");
     }
   };
@@ -63,7 +70,7 @@ function App() {
 
       setMessage("");
     } catch (err) {
-      console.error(err);
+      console.error(err.response?.data || err.message);
       alert("Chat failed ❌");
     }
   };
@@ -80,7 +87,7 @@ function App() {
         { user: "Summarize PDF", bot: res.data.reply },
       ]);
     } catch (err) {
-      console.error(err);
+      console.error(err.response?.data || err.message);
       alert("Summary failed ❌");
     }
   };
