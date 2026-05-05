@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-// 🔥 LIVE BACKEND
+// 🔥 LIVE BACKEND (your Render URL)
 const BASE_URL = "https://ai-doc-backend-emvr.onrender.com";
 
 function App() {
@@ -18,15 +18,11 @@ function App() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post(`${BASE_URL}/upload`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.post(`${BASE_URL}/upload`, formData);
 
       alert(res.data.message);
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error(err);
       alert("PDF upload failed ❌");
     }
   };
@@ -39,11 +35,7 @@ function App() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post(`${BASE_URL}/upload-audio`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.post(`${BASE_URL}/upload-audio`, formData);
 
       if (res.data.file?.filename) {
         setAudioUrl(`${BASE_URL}/uploads/${res.data.file.filename}`);
@@ -51,7 +43,7 @@ function App() {
 
       alert(res.data.message);
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error(err);
       alert("Audio upload failed ❌");
     }
   };
@@ -70,7 +62,7 @@ function App() {
 
       setMessage("");
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error(err);
       alert("Chat failed ❌");
     }
   };
@@ -78,16 +70,14 @@ function App() {
   // 📄 Summary
   const handleSummary = async () => {
     try {
-      const res = await axios.post(`${BASE_URL}/chat`, {
-        message: "summary",
-      });
+      const res = await axios.post(`${BASE_URL}/summary`);
 
       setChat((prev) => [
         ...prev,
-        { user: "Summarize PDF", bot: res.data.reply },
+        { user: "Summarize", bot: res.data.summary },
       ]);
     } catch (err) {
-      console.error(err.response?.data || err.message);
+      console.error(err);
       alert("Summary failed ❌");
     }
   };
@@ -103,7 +93,7 @@ function App() {
 
   return (
     <div style={{ maxWidth: "700px", margin: "auto", padding: "20px" }}>
-      <h1 style={{ textAlign: "center" }}>📄 AI PDF Chat</h1>
+      <h1 style={{ textAlign: "center" }}>📄 AI Document Chat</h1>
 
       {/* File Input */}
       <input
@@ -114,13 +104,15 @@ function App() {
       {/* Buttons */}
       <div style={{ marginTop: "10px" }}>
         <button onClick={handleUpload}>Upload PDF</button>
+
         <button onClick={handleAudioUpload} style={{ marginLeft: "10px" }}>
           Upload Audio 🎧
         </button>
       </div>
 
       <br />
-      <button onClick={handleSummary}>Summarize PDF</button>
+
+      <button onClick={handleSummary}>Summarize</button>
 
       {/* 🎧 AUDIO PLAYER */}
       {audioUrl && (
