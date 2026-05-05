@@ -35,8 +35,9 @@ const Document = mongoose.model("Document", DocumentSchema);
 // =====================
 // ⚙️ MIDDLEWARE
 // =====================
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
 // =====================
@@ -47,7 +48,10 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
 
 // =====================
 // 🔍 TEST ROUTE
@@ -57,16 +61,21 @@ app.get("/", (req, res) => {
 });
 
 // =====================
-// 📤 PDF UPLOAD (FIXED)
+// 📤 PDF UPLOAD (FINAL FIX)
 // =====================
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
+    // 🔥 FIX 1: file check
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
     const fileBuffer = fs.readFileSync(req.file.path);
     const data = await pdfParse(fileBuffer);
 
     let text = data.text ? data.text.trim() : "";
 
-    // 🔥 IMPORTANT FIX
+    // 🔥 FIX 2: scanned PDF fallback
     if (!text) {
       text = "⚠️ This PDF is scanned (image-based). Text extraction not possible.";
     }
@@ -82,7 +91,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("UPLOAD ERROR:", error);
     res.status(500).json({ error: "PDF failed" });
   }
 });
@@ -92,6 +101,10 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 // =====================
 app.post("/upload-audio", upload.single("file"), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No audio uploaded" });
+    }
+
     const audioText = "This audio talks about AI, machine learning and software development.";
 
     const timestamps = [
@@ -113,7 +126,7 @@ app.post("/upload-audio", upload.single("file"), async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("AUDIO ERROR:", error);
     res.status(500).json({ error: "Audio failed" });
   }
 });
@@ -141,15 +154,12 @@ app.post("/chat", async (req, res) => {
         response += `- ${t.text} at ${t.time}s\n`;
       });
     }
-
     else if (query.includes("summary")) {
       response = `📄 Summary:\n\n${doc.content.slice(0, 600)}...`;
     }
-
     else if (query.includes("name")) {
       response = doc.content.split("\n")[0];
     }
-
     else {
       response = doc.content.slice(0, 400);
     }
@@ -159,24 +169,16 @@ app.post("/chat", async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("CHAT ERROR:", error);
     res.status(500).json({ error: "Chat error" });
   }
 });
 
 // =====================
-// 📄 DEBUG ROUTE
+// 🚀 SERVER START (IMPORTANT FIX)
 // =====================
-app.get("/documents", async (req, res) => {
-  try {
-    const docs = await Document.find().sort({ createdAt: -1 });
-    res.json(docs);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch documents" });
-  }
-});
+const PORT = process.env.PORT || 5000;
 
-// =====================
-app.listen(5000, () => {
-  console.log("Server running on http://localhost:5000");
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
