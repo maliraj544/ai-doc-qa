@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
 const fs = require("fs");
+const path = require("path");
 const pdfParse = require("pdf-parse");
 const mongoose = require("mongoose");
 
@@ -38,20 +39,31 @@ const Document = mongoose.model("Document", DocumentSchema);
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static("uploads"));
+
+// =====================
+// 📁 ENSURE UPLOAD FOLDER
+// =====================
+const uploadDir = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
 
 // =====================
 // 📁 STORAGE CONFIG
 // =====================
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + "-" + file.originalname),
 });
 
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
+
+app.use("/uploads", express.static(uploadDir));
 
 // =====================
 // 🔍 TEST ROUTE
@@ -61,23 +73,27 @@ app.get("/", (req, res) => {
 });
 
 // =====================
-// 📤 PDF UPLOAD (FINAL FIX)
+// 📤 PDF UPLOAD (SAFE)
 // =====================
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
-    // 🔥 FIX 1: file check
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const fileBuffer = fs.readFileSync(req.file.path);
-    const data = await pdfParse(fileBuffer);
+    let text = "";
 
-    let text = data.text ? data.text.trim() : "";
+    try {
+      const fileBuffer = fs.readFileSync(req.file.path);
+      const data = await pdfParse(fileBuffer);
+      text = data.text?.trim() || "";
+    } catch (parseError) {
+      console.log("PDF PARSE FAILED:", parseError.message);
+      text = "⚠️ Could not extract text from this PDF.";
+    }
 
-    // 🔥 FIX 2: scanned PDF fallback
     if (!text) {
-      text = "⚠️ This PDF is scanned (image-based). Text extraction not possible.";
+      text = "⚠️ This PDF is scanned (image-based).";
     }
 
     await Document.create({
@@ -105,24 +121,25 @@ app.post("/upload-audio", upload.single("file"), async (req, res) => {
       return res.status(400).json({ error: "No audio uploaded" });
     }
 
-    const audioText = "This audio talks about AI, machine learning and software development.";
+    const audioText =
+      "This audio talks about AI, machine learning and software development.";
 
     const timestamps = [
       { text: "AI intro", time: 10 },
       { text: "ML basics", time: 25 },
-      { text: "Dev discussion", time: 45 }
+      { text: "Dev discussion", time: 45 },
     ];
 
     await Document.create({
       fileName: req.file.originalname,
       type: "audio",
       content: audioText,
-      timestamps: timestamps
+      timestamps,
     });
 
     res.json({
       message: "Audio uploaded & saved to DB 🎧",
-      file: req.file
+      file: req.file,
     });
 
   } catch (error) {
@@ -150,17 +167,14 @@ app.post("/chat", async (req, res) => {
     if (doc.type === "audio" && query.includes("audio")) {
       response = `🎧 Audio Content:\n\n${doc.content}\n\n⏱ Timestamps:\n`;
 
-      doc.timestamps.forEach(t => {
+      doc.timestamps.forEach((t) => {
         response += `- ${t.text} at ${t.time}s\n`;
       });
-    }
-    else if (query.includes("summary")) {
+    } else if (query.includes("summary")) {
       response = `📄 Summary:\n\n${doc.content.slice(0, 600)}...`;
-    }
-    else if (query.includes("name")) {
+    } else if (query.includes("name")) {
       response = doc.content.split("\n")[0];
-    }
-    else {
+    } else {
       response = doc.content.slice(0, 400);
     }
 
@@ -175,7 +189,7 @@ app.post("/chat", async (req, res) => {
 });
 
 // =====================
-// 🚀 SERVER START (IMPORTANT FIX)
+// 🚀 SERVER START
 // =====================
 const PORT = process.env.PORT || 5000;
 
