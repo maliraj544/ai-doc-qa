@@ -16,7 +16,7 @@ function App() {
       formData.append("file", file);
 
       const res = await axios.post(
-        "http://localhost:5000/upload",
+        "https://ai-doc-backend-emvr.onrender.com",
         formData
       );
 
