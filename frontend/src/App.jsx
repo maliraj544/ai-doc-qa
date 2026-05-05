@@ -1,6 +1,9 @@
 import { useState } from "react";
 import axios from "axios";
 
+// 🔥 LIVE BACKEND
+const BASE_URL = "https://ai-doc-backend-emvr.onrender.com";
+
 function App() {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
@@ -15,10 +18,7 @@ function App() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post(
-        "https://ai-doc-backend-emvr.onrender.com",
-        formData
-      );
+      const res = await axios.post(`${BASE_URL}/upload`, formData);
 
       alert(res.data.message);
     } catch (err) {
@@ -35,16 +35,11 @@ function App() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await axios.post(
-        "http://localhost:5000/upload-audio",
-        formData
-      );
+      const res = await axios.post(`${BASE_URL}/upload-audio`, formData);
 
-      // ✅ FIX: safe URL handling
+      // 🔥 audio URL from deployed backend
       if (res.data.file?.filename) {
-        setAudioUrl(
-          `http://localhost:5000/uploads/${res.data.file.filename}`
-        );
+        setAudioUrl(`${BASE_URL}/uploads/${res.data.file.filename}`);
       }
 
       alert(res.data.message);
@@ -59,10 +54,7 @@ function App() {
     try {
       if (!message.trim()) return;
 
-      const res = await axios.post(
-        "http://localhost:5000/chat",
-        { message }
-      );
+      const res = await axios.post(`${BASE_URL}/chat`, { message });
 
       setChat((prev) => [
         ...prev,
@@ -79,10 +71,9 @@ function App() {
   // 📄 Summary
   const handleSummary = async () => {
     try {
-      const res = await axios.post(
-        "http://localhost:5000/chat",
-        { message: "summary" }
-      );
+      const res = await axios.post(`${BASE_URL}/chat`, {
+        message: "summary",
+      });
 
       setChat((prev) => [
         ...prev,
