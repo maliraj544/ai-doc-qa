@@ -73,7 +73,20 @@ app.get("/", (req, res) => {
 });
 
 // =====================
-// 📤 PDF UPLOAD (SAFE)
+// 📄 DEBUG ROUTE (🔥 IMPORTANT)
+// =====================
+app.get("/documents", async (req, res) => {
+  try {
+    const docs = await Document.find().sort({ createdAt: -1 });
+    res.json(docs);
+  } catch (err) {
+    console.error("DOCUMENT FETCH ERROR:", err);
+    res.status(500).json({ error: "Failed to fetch documents" });
+  }
+});
+
+// =====================
+// 📤 PDF UPLOAD
 // =====================
 app.post("/upload", upload.single("file"), async (req, res) => {
   try {
